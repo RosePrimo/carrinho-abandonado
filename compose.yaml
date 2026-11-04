@@ -1,0 +1,15 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: carrinho-postgres
+    environment:
+      POSTGRES_DB: carrinho
+      POSTGRES_USER: carrinho
+      POSTGRES_PASSWORD: carrinho
+    ports:
+      - "5433:5432"
+    volumes:
+      - carrinho-dados:/var/lib/postgresql/data
+
+volumes:
+  carrinho-dados:

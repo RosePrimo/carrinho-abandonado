@@ -1,0 +1,15 @@
+spring:
+  application:
+    name: carrinho
+  datasource:
+    url: jdbc:postgresql://localhost:5433/carrinho
+    username: carrinho
+    password: carrinho
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+carrinho:
+  abandono:
+    minutos: 2
+    intervalo-ms: 30000
