@@ -1,9 +1,10 @@
 package com.rose.carrinho.job;
 
 import com.rose.carrinho.model.Carrinho;
-import com.rose.carrinho.model.StatusCarrinho;
 import com.rose.carrinho.repository.CarrinhoRepository;
 import com.rose.carrinho.service.LembreteService;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -23,12 +24,16 @@ public class AbandonoCarrinhoJob {
     private final CarrinhoRepository repository;
     private final LembreteService lembrete;
     private final long minutosParaAbandono;
+    private final Counter carrinhosAbandonados;
 
-    public AbandonoCarrinhoJob(CarrinhoRepository repository, LembreteService lembrete,
+    public AbandonoCarrinhoJob(CarrinhoRepository repository, LembreteService lembrete, MeterRegistry metricas,
                                @Value("${carrinho.abandono.minutos:30}") long minutosParaAbandono) {
         this.repository = repository;
         this.lembrete = lembrete;
         this.minutosParaAbandono = minutosParaAbandono;
+        this.carrinhosAbandonados = Counter.builder("carrinho.abandonados")
+                .description("Quantidade de carrinhos marcados como abandonados")
+                .register(metricas);
     }
 
     @Scheduled(fixedDelayString = "${carrinho.abandono.intervalo-ms:60000}")
@@ -38,12 +43,13 @@ public class AbandonoCarrinhoJob {
         List<Carrinho> parados = repository.travarParadosParaAbandono(limite);
 
         for (Carrinho carrinho : parados) {
-            carrinho.marcarAbandonado();          // muda o status e marca lembreteEnviado
-            if (!carrinho.getItens().isEmpty()) { // carrinho vazio não precisa de lembrete
+            carrinho.marcarAbandonado();
+            if (!carrinho.getItens().isEmpty()) {
                 lembrete.enviar(carrinho);
             }
         }
         if (!parados.isEmpty()) {
+            carrinhosAbandonados.increment(parados.size());
             log.info("{} carrinho(s) marcado(s) como abandonado(s)", parados.size());
         }
     }

@@ -5,6 +5,8 @@ spring:
     url: jdbc:postgresql://localhost:5433/carrinho
     username: carrinho
     password: carrinho
+    hikari:
+      connection-timeout: 3000
   jpa:
     hibernate:
       ddl-auto: update
@@ -16,3 +18,15 @@ carrinho:
 jwt:
   secret: troque-esta-chave-por-uma-bem-grande-de-32-caracteres-ou-mais
   expiracao-segundos: 3600
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: always
+  metrics:
+    distribution:
+      percentiles:
+        http.server.requests: 0.5,0.95,0.99

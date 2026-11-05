@@ -37,6 +37,7 @@ public class SecurityConfig {
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/auth/login").permitAll()     // login é público
+                        .requestMatchers("/actuator/**").permitAll()    // monitoramento (em produção: rede interna)
                         .anyRequest().authenticated())                  // todo o resto exige token
                 .oauth2ResourceServer(o -> o.jwt(Customizer.withDefaults())); // valida o "Bearer ..."
         return http.build();
