@@ -13,3 +13,6 @@ carrinho:
   abandono:
     minutos: 2
     intervalo-ms: 30000
+jwt:
+  secret: troque-esta-chave-por-uma-bem-grande-de-32-caracteres-ou-mais
+  expiracao-segundos: 3600

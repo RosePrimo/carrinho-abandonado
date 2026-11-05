@@ -2,7 +2,6 @@ package com.rose.carrinho.service;
 
 import com.rose.carrinho.dto.AdicionarItemRequest;
 import com.rose.carrinho.dto.CarrinhoResponse;
-import com.rose.carrinho.dto.CriarCarrinhoRequest;
 import com.rose.carrinho.model.Carrinho;
 import com.rose.carrinho.model.StatusCarrinho;
 import com.rose.carrinho.repository.CarrinhoRepository;
@@ -20,43 +19,43 @@ public class CarrinhoService {
         this.repository = repository;
     }
 
-    /** Regra: cada cliente tem no máximo UM carrinho ativo. Se já tem, devolve o mesmo. */
     @Transactional
-    public CarrinhoResponse criar(CriarCarrinhoRequest request) {
-        Carrinho carrinho = repository.findByClienteIdAndStatus(request.clienteId(), StatusCarrinho.ATIVO)
-                .orElseGet(() -> repository.save(new Carrinho(request.clienteId())));
+    public CarrinhoResponse criar(String clienteId) {
+        Carrinho carrinho = repository.findByClienteIdAndStatus(clienteId, StatusCarrinho.ATIVO)
+                .orElseGet(() -> repository.save(new Carrinho(clienteId)));
         return CarrinhoResponse.de(carrinho);
     }
 
     @Transactional(readOnly = true)
-    public CarrinhoResponse buscar(Long id) {
-        return CarrinhoResponse.de(buscarCarrinho(id));
+    public CarrinhoResponse buscar(Long id, String clienteId) {
+        return CarrinhoResponse.de(buscarDoCliente(id, clienteId));
     }
 
     @Transactional
-    public CarrinhoResponse adicionarItem(Long id, AdicionarItemRequest request) {
-        Carrinho carrinho = buscarCarrinho(id);
+    public CarrinhoResponse adicionarItem(Long id, String clienteId, AdicionarItemRequest request) {
+        Carrinho carrinho = buscarDoCliente(id, clienteId);
         carrinho.adicionarItem(request.produto(), request.quantidade(), request.precoUnitario());
-        // saveAndFlush: grava agora, para o item novo já voltar com o id
         return CarrinhoResponse.de(repository.saveAndFlush(carrinho));
     }
 
     @Transactional
-    public CarrinhoResponse removerItem(Long id, Long itemId) {
-        Carrinho carrinho = buscarCarrinho(id);
+    public CarrinhoResponse removerItem(Long id, String clienteId, Long itemId) {
+        Carrinho carrinho = buscarDoCliente(id, clienteId);
         carrinho.removerItem(itemId);
         return CarrinhoResponse.de(carrinho);
     }
 
     @Transactional
-    public CarrinhoResponse finalizar(Long id) {
-        Carrinho carrinho = buscarCarrinho(id);
+    public CarrinhoResponse finalizar(Long id, String clienteId) {
+        Carrinho carrinho = buscarDoCliente(id, clienteId);
         carrinho.finalizar();
         return CarrinhoResponse.de(carrinho);
     }
 
-    private Carrinho buscarCarrinho(Long id) {
+    /** Carrinho de outra pessoa responde 404, como se não existisse: não revela que ele existe. */
+    private Carrinho buscarDoCliente(Long id, String clienteId) {
         return repository.findById(id)
+                .filter(c -> c.getClienteId().equals(clienteId))
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Carrinho não encontrado"));
     }
 }
