@@ -14,7 +14,7 @@ Java 21 · Spring Boot 4 · Spring Data JPA · PostgreSQL · Docker Compose
 2. Cada alteração no carrinho atualiza o campo `atualizado_em`.
 3. Se o cliente **finaliza a compra**, o carrinho vira `FINALIZADO`.
 4. A cada 30 segundos, um **job agendado** procura carrinhos `ATIVO` sem alteração há mais de
-   X minutos, marca como `ABANDONADO` e **envia um lembrete** (simulado no log).
+   X minutos, marca como `ABANDONADO` e **envia um lembrete** (simulado e registrado no banco).
 
 ```
 ATIVO ──── finalizar ────► FINALIZADO
@@ -28,9 +28,9 @@ ATIVO ──── finalizar ────► FINALIZADO
 com.rose.carrinho
 ├── controller   → CarrinhoController (HTTP) e ApiExceptionHandler (erros → 409)
 ├── service      → CarrinhoService (regras e transações) e LembreteService (envio do lembrete)
-├── repository   → CarrinhoRepository (Spring Data JPA)
+├── repository   → CarrinhoRepository e LembreteRepository (Spring Data JPA)
 ├── dto          → objetos de entrada e saída da API (records com validação)
-├── model        → Carrinho, ItemCarrinho e StatusCarrinho
+├── model        → Carrinho, ItemCarrinho, StatusCarrinho e Lembrete
 └── job          → AbandonoCarrinhoJob (@Scheduled)
 ```
 
@@ -45,6 +45,13 @@ carrinho                         item_carrinho
 ├── status                       ├── produto
 ├── atualizado_em                ├── quantidade
 └── lembrete_enviado             └── preco_unitario
+
+lembrete
+├── id
+├── carrinho_id
+├── cliente_id
+├── instancia     (qual instância da API enviou)
+└── enviado_em
 ```
 
 - `@OneToMany` com `cascade = ALL` e `orphanRemoval = true`: o carrinho é o dono dos itens.
@@ -70,6 +77,40 @@ carrinho                         item_carrinho
 | POST | `/carrinhos/{id}/itens` | Adiciona um produto | 200 · 400 · 409 |
 | DELETE | `/carrinhos/{id}/itens/{itemId}` | Remove um produto | 200 · 409 |
 | POST | `/carrinhos/{id}/finalizar` | Finaliza a compra | 200 · 409 |
+
+## Job em várias instâncias: o problema e a correção
+
+Com duas instâncias da API, os dois jobs agendados liam os mesmos carrinhos ao mesmo tempo
+e enviavam o lembrete em dobro: o status `ABANDONADO` só era gravado no fim da rodada, e até
+lá a outra instância ainda enxergava os carrinhos como `ATIVO`.
+
+| | Sem trava | Com `FOR UPDATE SKIP LOCKED` |
+|---|---|---|
+| Carrinhos | 20 | 20 |
+| Lembretes enviados | 33 (13 duplicados) | 20 |
+| Clientes avisados 2 vezes | 13 | 0 |
+
+**Correção:** a busca do job usa `SELECT ... FOR UPDATE SKIP LOCKED`. Cada instância tranca os
+carrinhos que pegou, e a outra pula as linhas trancadas. Cada carrinho é processado por uma
+instância só, e as instâncias dividem o trabalho.
+
+```sql
+select * from carrinho
+where status = 'ATIVO' and atualizado_em < :limite
+order by atualizado_em
+limit 100
+for update skip locked
+```
+
+Cada lembrete é gravado na tabela `lembrete`, com a instância que enviou, o que permite
+conferir duplicidades com SQL:
+
+```sql
+select cliente_id, count(*) as vezes, string_agg(instancia, ' + ') as instancias
+from lembrete
+group by cliente_id
+having count(*) > 1;
+```
 
 ## Configuração
 
@@ -103,8 +144,6 @@ curl -X POST http://localhost:8081/carrinhos/1/finalizar
 
 ## Próximos passos
 
-- **Job em várias instâncias:** com duas instâncias, os dois jobs podem pegar o mesmo carrinho e enviar
-  o lembrete em dobro. A correção planejada é `SELECT ... FOR UPDATE SKIP LOCKED`, para cada instância
-  pular os carrinhos que a outra já pegou.
-- Enviar o lembrete por fila (Kafka), em vez de dentro do job.
+- Marcar como abandonado e confirmar a transação antes de enviar o lembrete, para não segurar a
+  trava durante o envio (padrão Outbox ou fila com Kafka).
 - Testes automatizados das regras do carrinho.

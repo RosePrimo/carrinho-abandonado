@@ -35,8 +35,7 @@ public class AbandonoCarrinhoJob {
     @Transactional
     public void verificar() {
         Instant limite = Instant.now().minus(Duration.ofMinutes(minutosParaAbandono));
-        List<Carrinho> parados = repository
-                .findTop100ByStatusAndAtualizadoEmBeforeOrderByAtualizadoEmAsc(StatusCarrinho.ATIVO, limite);
+        List<Carrinho> parados = repository.travarParadosParaAbandono(limite);
 
         for (Carrinho carrinho : parados) {
             carrinho.marcarAbandonado();          // muda o status e marca lembreteEnviado
