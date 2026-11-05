@@ -29,6 +29,15 @@ services:
       - "8082:8080"
     depends_on: [postgres]
     restart: on-failure
-
+  prometheus:
+    image: prom/prometheus:v3.1.0
+    container_name: carrinho-prometheus
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./alertas.yml:/etc/prometheus/alertas.yml:ro
+    ports:
+      - "9090:9090"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 volumes:
   carrinho-dados:

@@ -1,0 +1,25 @@
+groups:
+  - name: carrinho
+    rules:
+      - alert: AplicacaoFora
+        expr: up{job="carrinho"} == 0
+        for: 30s
+        labels:
+          severidade: critica
+        annotations:
+          resumo: "A API do carrinho está fora do ar"
+
+      - alert: TempoDeRespostaAlto
+        expr: max(http_server_requests_seconds{quantile="0.95"}) > 0.5
+        for: 1m
+        labels:
+          severidade: aviso
+        annotations:
+          resumo: "O p95 das requisições passou de 500 ms"
+
+      - alert: MuitosCarrinhosAbandonados
+        expr: increase(carrinho_abandonados_total[10m]) > 5
+        labels:
+          severidade: aviso
+        annotations:
+          resumo: "Mais de 5 carrinhos abandonados nos últimos 10 minutos"
