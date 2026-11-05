@@ -69,9 +69,13 @@ public class SecurityConfig {
     /** Usuários de teste em memória. Num sistema real, viriam do banco. */
     @Bean
     public UserDetailsService usuarios(PasswordEncoder encoder) {
-        return new InMemoryUserDetailsManager(
-                User.withUsername("rose").password(encoder.encode("123")).roles("CLIENTE").build(),
-                User.withUsername("ana").password(encoder.encode("123")).roles("CLIENTE").build());
+        java.util.List<org.springframework.security.core.userdetails.UserDetails> lista = new java.util.ArrayList<>();
+        lista.add(User.withUsername("rose").password(encoder.encode("123")).roles("CLIENTE").build());
+        lista.add(User.withUsername("ana").password(encoder.encode("123")).roles("CLIENTE").build());
+        for (int i = 1; i <= 20; i++) {
+            lista.add(User.withUsername("cliente" + i).password(encoder.encode("123")).roles("CLIENTE").build());
+        }
+        return new InMemoryUserDetailsManager(lista);
     }
 
     /** Quem confere usuário e senha no login. */
