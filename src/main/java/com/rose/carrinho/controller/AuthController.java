@@ -3,6 +3,8 @@ package com.rose.carrinho.controller;
 import com.rose.carrinho.dto.LoginRequest;
 import com.rose.carrinho.dto.TokenResponse;
 import com.rose.carrinho.security.TokenService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import jakarta.validation.Valid;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -21,6 +23,8 @@ public class AuthController {
         this.tokenService = tokenService;
     }
 
+    @Operation(summary = "Login", description = "Valida usuário e senha e devolve um token JWT válido por 1 hora")
+    @SecurityRequirements   // o login é público: não pede token
     @PostMapping("/login")
     public TokenResponse login(@Valid @RequestBody LoginRequest request) {
         Authentication autenticado = authenticationManager.authenticate(

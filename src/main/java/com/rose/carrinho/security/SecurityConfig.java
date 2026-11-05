@@ -38,6 +38,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/auth/login").permitAll()     // login é público
                         .requestMatchers("/actuator/**").permitAll()    // monitoramento (em produção: rede interna)
+                        .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
                         .anyRequest().authenticated())                  // todo o resto exige token
                 .oauth2ResourceServer(o -> o.jwt(Customizer.withDefaults())); // valida o "Bearer ..."
         return http.build();
