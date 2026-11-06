@@ -1,6 +1,8 @@
 package com.rose.carrinho.model;
 
+import com.rose.carrinho.exception.RegraDeNegocioException;
 import jakarta.persistence.*;
+
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -28,7 +30,6 @@ public class Carrinho {
     @Column(name = "lembrete_enviado", nullable = false)
     private boolean lembreteEnviado;
 
-    // UM carrinho tem MUITOS itens
     @OneToMany(mappedBy = "carrinho", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ItemCarrinho> itens = new ArrayList<>();
 
@@ -61,7 +62,7 @@ public class Carrinho {
     public void finalizar() {
         exigirAtivo();
         if (itens.isEmpty()) {
-            throw new IllegalStateException("Carrinho vazio não pode ser finalizado");
+            throw new RegraDeNegocioException("Carrinho vazio não pode ser finalizado");
         }
         this.status = StatusCarrinho.FINALIZADO;
         tocar();
@@ -78,11 +79,10 @@ public class Carrinho {
 
     private void exigirAtivo() {
         if (status != StatusCarrinho.ATIVO) {
-            throw new IllegalStateException("Carrinho não está ativo");
+            throw new RegraDeNegocioException("Carrinho não está ativo");
         }
     }
 
-    // toda mexida no carrinho "renova" o relógio do abandono
     private void tocar() {
         this.atualizadoEm = Instant.now();
     }
