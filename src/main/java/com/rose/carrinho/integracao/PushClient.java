@@ -8,11 +8,16 @@ import java.util.concurrent.ThreadLocalRandom;
 
 /** Simula um serviço externo de push (como o Firebase), que às vezes falha. */
 @Component
-public class PushClient {
+public class PushClient implements CanalDeLembrete{
 
     private static final Logger log = LoggerFactory.getLogger(PushClient.class);
 
     private volatile double taxaFalha = 0.0;   // 0.0 = nunca falha; 1.0 = sempre falha
+
+    @Override
+    public String nome() {
+        return "push";
+    }
 
     public void enviar(String clienteId, String mensagem) {
         try {
@@ -28,4 +33,5 @@ public class PushClient {
 
     public double getTaxaFalha() { return taxaFalha; }
     public void setTaxaFalha(double taxaFalha) { this.taxaFalha = taxaFalha; }
+
 }
